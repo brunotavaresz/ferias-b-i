@@ -125,7 +125,7 @@ export function ProsCons({ pros, cons, minePros = [], mineCons = [], stacked }) 
 /* Campo de formulário com etiqueta. */
 export function Field({ label, htmlFor, children, className, hint }) {
   return (
-    <div className={cn("grid gap-2", className)}>
+    <div className={cn("grid content-start gap-2", className)}>
       <label htmlFor={htmlFor} className="text-sm font-medium leading-none">{label}</label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}

@@ -98,9 +98,11 @@ export default function TripView({ user }) {
       </Routes>
       <TripSettings ctx={ctx} open={settings} onOpenChange={setSettings} />
       <CaptureDialog ctx={ctx} open={capture.open} defaultDestId={capture.destId || loc.pathname.match(/\/d\/([^/?]+)/)?.[1]} onOpenChange={(o) => setCapture((c) => ({ ...c, open: o }))} />
-      <Button size="lg" className="no-print fixed bottom-5 right-5 z-30 rounded-full shadow-lg" onClick={() => setCapture({ open: true, destId: null })}>
-        <ClipboardPaste /> Colar página
-      </Button>
+      {!loc.pathname.includes("/d/") && (
+        <Button size="lg" className="no-print fixed bottom-5 right-5 z-30 rounded-full shadow-lg" onClick={() => setCapture({ open: true, destId: null })}>
+          <ClipboardPaste /> Colar página
+        </Button>
+      )}
     </div>
   );
 }
