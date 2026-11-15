@@ -14,39 +14,30 @@ App para planear férias a dois: guardar destinos possíveis e, em cada um, voos
 - **Comparar destinos.** Custo total por pessoa (voo + alojamento + transportes e atividades incluídos + dia a dia estimado), por pessoa e dia, orçamento, e critérios com pesos ajustáveis: custo, alojamento, voos e horários, interesse e clima.
 - **Roteiro.** Dias criados a partir das datas, chegada e partida do voo e check-in/out automáticos, planos com hora, tipo e custo, atividades por encaixar, reordenar, imprimir.
 
+## Onde está
+
+- **App:** <https://brunotavaresz.github.io/ferias-b-i/>. Cada push para `main` faz testes, build e publica (`.github/workflows/deploy.yml`).
+- **Firebase:** projeto `ferias-b-i` (plano Spark, gratuito), com login Google e Firestore. A configuração web está em `src/lib/firebase.js`. Não é secreta, porque quem protege os dados são as regras em `firestore.rules`.
+
 ## Correr localmente
 
 ```bash
 npm install
-npm run dev
-```
-
-Sem configuração do Firebase, a app corre em **modo local**: guarda tudo no browser, sem login e sem partilha. Serve para experimentar.
-
-```bash
+npm run dev     # liga ao Firebase ferias-b-i
 npm test        # testes da lógica de pontuação
 npm run build   # build de produção para dist/
 ```
 
-## Ligar ao Firebase (para usarem os dois)
+Para experimentar sem Firebase, cria um `.env` com `VITE_LOCAL_MODE=true`. Nesse modo os dados ficam só no browser, sem login.
 
-1. Em <https://console.firebase.google.com> cria um projeto (o Google Analytics pode ficar desligado).
-2. **Authentication > Sign-in method:** ativa **Google**.
-3. **Firestore Database:** cria a base de dados em modo de produção (região `eur3` ou `europe-west1`).
-4. **Regras:** copia o conteúdo de `firestore.rules` para o separador Regras do Firestore e publica (ou `firebase deploy --only firestore:rules` com a Firebase CLI).
-5. **Definições do projeto > As tuas apps:** adiciona uma app Web e copia a configuração.
-6. Copia `.env.example` para `.env` e preenche os valores `VITE_FIREBASE_*`.
-7. `npm run dev`, entra com Google, cria uma viagem e em **Partilhar e definições** adiciona o email Google da tua namorada.
+## Configuração do Firebase (já feita)
+
+1. Authentication → Sign-in method → **Google** ativado.
+2. Firestore (`eur3`, modo de produção), com as regras de `firestore.rules` publicadas. Quando mudares as regras, volta a colá-las em Firestore → Regras.
+3. Authentication → Settings → **Authorized domains** com `brunotavaresz.github.io` (e `localhost`).
+4. Para partilhar, na app vai a **Partilhar e definições** e adiciona o email Google da outra pessoa.
 
 As regras só deixam ler e escrever uma viagem a quem estiver na lista `members` (emails em minúsculas).
-
-## Publicar no Netlify
-
-1. Novo site a partir do repositório (o `netlify.toml` já define `npm run build` e a pasta `dist`).
-2. Em **Site configuration > Environment variables**, adiciona as mesmas `VITE_FIREBASE_*` do `.env`.
-3. No Firebase, em **Authentication > Settings > Authorized domains**, adiciona o domínio do Netlify (ex.: `ferias-a-dois.netlify.app`).
-
-A app usa rotas com `#`, por isso não precisa de redirects.
 
 ## Estrutura
 

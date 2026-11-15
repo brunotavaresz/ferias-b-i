@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  // caminhos relativos: funciona em brunotavaresz.github.io/ferias-b-i/ e em localhost
+  base: "./",
   build: {
     rollupOptions: {
       output: {
