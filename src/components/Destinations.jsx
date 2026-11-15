@@ -8,6 +8,7 @@ import { COST_LEVELS, SEASONS } from "../lib/model.js";
 import { eur, fmtDate, plural } from "../lib/format.js";
 import { EmptyState, Meter, ScoreRing, Stars, WeightControl } from "./common.jsx";
 import DestinationForm from "./DestinationForm.jsx";
+import PendingCard from "./PendingCard.jsx";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,8 @@ export default function Destinations({ ctx }) {
           <Button onClick={() => setForm("new")}><Plus /> Destino</Button>
         </div>
       </div>
+
+      <PendingCard ctx={ctx} limit={5} />
 
       {showWeights && (
         <Card className="gap-4 py-5">

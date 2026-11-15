@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Routes, Route, useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import { ArrowLeft, CalendarDays, MapPinned, Settings2, Trash2, UserPlus, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, MapPinned, Settings2, Ticket, Trash2, UserPlus, X } from "lucide-react";
+import Reservations from "./Reservations.jsx";
 import { store } from "../lib/store.js";
 import { firebaseEnabled } from "../lib/firebase.js";
 import { DEFAULT_WEIGHTS } from "../lib/model.js";
@@ -52,7 +53,7 @@ export default function TripView({ user }) {
   if (data === undefined) return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-64 rounded-xl" /></div>;
   if (!ctx) return <div className="space-y-4"><p>Esta viagem não existe ou não tens acesso.</p><Button variant="outline" asChild><Link to="/">Voltar às viagens</Link></Button></div>;
 
-  const tab = loc.pathname.includes("/roteiro") ? "roteiro" : "destinos";
+  const tab = loc.pathname.includes("/roteiro") ? "roteiro" : loc.pathname.includes("/reservas") ? "reservas" : "destinos";
   return (
     <div className="space-y-6">
       <div className="no-print space-y-4">
@@ -75,9 +76,10 @@ export default function TripView({ user }) {
               <Button variant="ghost" size="icon-sm" aria-label="Definições" onClick={() => setSettings(true)}><Settings2 /></Button>
             </div>
           </div>
-          <Tabs value={tab} onValueChange={(v) => nav(v === "roteiro" ? `${ctx.base}/roteiro` : ctx.base)}>
+          <Tabs value={tab} onValueChange={(v) => nav(v === "destinos" ? ctx.base : `${ctx.base}/${v}`)}>
             <TabsList>
               <TabsTrigger value="destinos"><MapPinned /> Destinos</TabsTrigger>
+              <TabsTrigger value="reservas"><Ticket /> Reservas</TabsTrigger>
               <TabsTrigger value="roteiro"><CalendarDays /> Roteiro</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -87,6 +89,7 @@ export default function TripView({ user }) {
       <Routes>
         <Route index element={<Destinations ctx={ctx} />} />
         <Route path="d/:destId" element={<DestinationView ctx={ctx} />} />
+        <Route path="reservas" element={<Reservations ctx={ctx} />} />
         <Route path="roteiro" element={<Itinerary ctx={ctx} />} />
         <Route path="roteiro/:destId" element={<Itinerary ctx={ctx} />} />
       </Routes>
@@ -101,11 +104,11 @@ function TripSettings({ ctx, open, onOpenChange }) {
   const [email, setEmail] = useState("");
   const nav = useNavigate();
   const toast = useToast();
-  useEffect(() => { if (open) setF({ nome: trip.nome || "", pessoas: trip.pessoas || 2, orcamento: trip.orcamento ?? "", notas: trip.notas || "" }); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (open) setF({ nome: trip.nome || "", pessoas: trip.pessoas || 2, orcamento: trip.orcamento ?? "", notas: trip.notas || "", origem: trip.origem || "Porto", origemAeroporto: trip.origemAeroporto || "OPO" }); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const isOwner = trip.ownerUid === user.uid;
   async function save(e) {
     e.preventDefault();
-    await ctx.updateTrip({ nome: f.nome.trim() || "Férias", pessoas: Number(f.pessoas) || 2, orcamento: f.orcamento === "" ? null : Number(f.orcamento), notas: f.notas });
+    await ctx.updateTrip({ nome: f.nome.trim() || "Férias", pessoas: Number(f.pessoas) || 2, orcamento: f.orcamento === "" ? null : Number(f.orcamento), notas: f.notas, origem: f.origem.trim() || "Porto", origemAeroporto: f.origemAeroporto.trim().toUpperCase() || "OPO" });
     onOpenChange(false);
     toast("Guardado");
   }
@@ -147,6 +150,8 @@ function TripSettings({ ctx, open, onOpenChange }) {
             <Field label="Nome" htmlFor="ts-n" className="sm:col-span-2"><Input id="ts-n" value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></Field>
             <Field label="Viajantes" htmlFor="ts-p"><Input id="ts-p" type="number" min="1" value={f.pessoas} onChange={(e) => setF({ ...f, pessoas: e.target.value })} /></Field>
             <Field label="Orçamento por pessoa (€)" htmlFor="ts-o"><Input id="ts-o" type="number" min="0" value={f.orcamento} onChange={(e) => setF({ ...f, orcamento: e.target.value })} /></Field>
+            <Field label="Partem de" htmlFor="ts-or"><Input id="ts-or" value={f.origem} onChange={(e) => setF({ ...f, origem: e.target.value })} /></Field>
+            <Field label="Aeroporto de partida" htmlFor="ts-oa" hint="Para as pesquisas de voos."><Input id="ts-oa" maxLength={3} className="uppercase" value={f.origemAeroporto} onChange={(e) => setF({ ...f, origemAeroporto: e.target.value })} /></Field>
             <Field label="Notas" htmlFor="ts-x" className="sm:col-span-2"><Textarea id="ts-x" value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} /></Field>
           </form>
         )}

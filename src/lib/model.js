@@ -27,6 +27,24 @@ export const CITY_PRESETS = {
   "Istambul": "barato", "Dubrovnik": "caro", "Split": "medio", "Malta": "medio", "Marraquexe": "barato", "Tenerife": "medio",
 };
 
+/* Aeroporto principal (IATA) de cada cidade sugerida, para as pesquisas de voos. */
+export const CITY_AIRPORTS = {
+  "Nice": "NCE", "Mónaco": "NCE", "Cannes": "NCE", "Menton": "NCE", "Marselha": "MRS", "Paris": "PAR", "Lyon": "LYS", "Bordéus": "BOD", "Estrasburgo": "SXB",
+  "Roma": "ROM", "Florença": "FLR", "Veneza": "VCE", "Milão": "MIL", "Nápoles": "NAP", "Bolonha": "BLQ", "Costa Amalfitana": "NAP",
+  "Barcelona": "BCN", "Madrid": "MAD", "Sevilha": "SVQ", "Valência": "VLC", "Granada": "GRX", "Palma de Maiorca": "PMI",
+  "Lisboa": "LIS", "Porto": "OPO", "Madeira": "FNC", "Açores": "PDL", "Algarve": "FAO",
+  "Londres": "LON", "Edimburgo": "EDI", "Dublin": "DUB", "Amesterdão": "AMS", "Bruxelas": "BRU",
+  "Berlim": "BER", "Munique": "MUC", "Viena": "VIE", "Praga": "PRG", "Budapeste": "BUD", "Cracóvia": "KRK",
+  "Copenhaga": "CPH", "Estocolmo": "STO", "Zurique": "ZRH", "Atenas": "ATH", "Santorini": "JTR",
+  "Istambul": "IST", "Dubrovnik": "DBV", "Split": "SPU", "Malta": "MLA", "Marraquexe": "RAK", "Tenerife": "TCI",
+};
+
+export const BOOKING_STATES = {
+  porReservar: { label: "Por reservar" },
+  reservado: { label: "Reservado" },
+  pago: { label: "Pago" },
+};
+
 /** Época sugerida pelo mês (Europa, regra geral). */
 export function suggestSeason(dateStr) {
   if (!dateStr) return "media";
@@ -65,6 +83,7 @@ export const FIELDS = {
   alojamento: [
     { k: "tipo", label: "Tipo", type: "select", options: [["hotel", "Hotel"], ["apartamento", "Apartamento"], ["bnb", "B&B / guesthouse"], ["hostel", "Hostel"]] },
     { k: "zona", label: "Zona / bairro", type: "text" },
+    { k: "morada", label: "Morada (para o mapa)", type: "text", ph: "1 Avenue Thiers" },
     { k: "distancia", label: "Distância ao centro (km)", type: "number", step: 0.1 },
     { k: "nota", label: "Nota (0–10)", type: "number", step: 0.1 },
     { k: "comentarios", label: "N.º de comentários", type: "number", step: 1 },
@@ -84,6 +103,7 @@ export const FIELDS = {
     { k: "conforto", label: "Comodidade", type: "stars" },
   ],
   atividade: [
+    { k: "morada", label: "Local ou morada (para o mapa)", type: "text", ph: "Musée Matisse" },
     { k: "tipo", label: "Tipo", type: "select", options: [["visita", "Visita / museu"], ["passeio", "Passeio / excursão"], ["comida", "Restaurante / comida"], ["praia", "Praia / natureza"], ["noite", "Noite / espetáculo"], ["outro", "Outro"]] },
     { k: "duracao", label: "Duração (h)", type: "number", step: 0.5 },
   ],

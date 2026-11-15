@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { COST_LEVELS, SEASONS, CITY_PRESETS, suggestSeason } from "../lib/model.js";
+import { COST_LEVELS, SEASONS, CITY_PRESETS, CITY_AIRPORTS, suggestSeason } from "../lib/model.js";
+import { geocode } from "../lib/geo.js";
 import { cityRef } from "../lib/scoring.js";
 import { ConfirmButton, Field, Stars } from "./common.jsx";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,14 @@ export default function DestinationForm({ ctx, dest, onClose, onSaved }) {
   }
   async function submit(e) {
     e.preventDefault();
+    const nome = f.nome.trim() || "Destino";
+    let coords = {};
+    if (!f.lat || nome !== (dest?.nome || "")) {
+      const g = await geocode(`${nome}${f.pais ? ", " + f.pais : ""}`);
+      if (g) coords = { lat: g.lat, lng: g.lng };
+    }
     const id = await ctx.upsert("destinations", {
-      ...f, nome: f.nome.trim() || "Destino",
+      ...f, ...coords, nome, aeroporto: (f.aeroporto || "").trim().toUpperCase() || null,
       refNoite: f.refNoite === "" || f.refNoite == null ? null : Number(f.refNoite),
       refDia: f.refDia === "" || f.refDia == null ? null : Number(f.refDia),
     });
@@ -52,6 +59,9 @@ export default function DestinationForm({ ctx, dest, onClose, onSaved }) {
             <datalist id="cities">{Object.keys(CITY_PRESETS).map((c) => <option key={c} value={c} />)}</datalist>
           </Field>
           <Field label="País" htmlFor="df-p"><Input id="df-p" value={f.pais || ""} onChange={(e) => set("pais", e.target.value)} /></Field>
+          <Field label="Aeroporto (código)" htmlFor="df-a" hint="Para a pesquisa no Skyscanner. Ex.: NCE, FCO, ROM.">
+            <Input id="df-a" maxLength={3} className="uppercase" placeholder={CITY_AIRPORTS[f.nome.trim()] || "NCE"} value={f.aeroporto || ""} onChange={(e) => set("aeroporto", e.target.value)} />
+          </Field>
           <Field label="Chegada" htmlFor="df-i"><Input id="df-i" type="date" value={f.inicio || ""} onChange={(e) => onStart(e.target.value)} /></Field>
           <Field label="Partida" htmlFor="df-f"><Input id="df-f" type="date" aria-invalid={bad || undefined} value={f.fim || ""} min={f.inicio || undefined} onChange={(e) => set("fim", e.target.value)} /></Field>
           {bad && <p className="text-sm text-destructive sm:col-span-2">A partida tem de ser depois da chegada.</p>}

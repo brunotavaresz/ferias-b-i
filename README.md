@@ -14,6 +14,9 @@ App para planear férias a dois: guardar destinos possíveis e, em cada um, voos
   - Transportes: preço, duração e comodidade. Atividades: sobretudo o vosso interesse.
 - **Opinião de cada um.** Cada pessoa dá estrelas a cada opção e a cada destino, e isso entra na pontuação (com o peso "opinião").
 - **Comparar destinos.** Custo total por pessoa (voo + alojamento + transportes e atividades incluídos + dia a dia estimado), por pessoa e dia, orçamento, e critérios com pesos ajustáveis: custo, alojamento, voos e horários, interesse e clima.
+- **Pesquisar.** Em cada categoria há botões que abrem o Google Flights, Skyscanner, Booking, Airbnb, GetYourGuide e Google Maps já com o destino, as datas e os viajantes (a origem e o aeroporto de partida ficam nas definições da viagem).
+- **Mapa.** Alojamentos e atividades no mapa (OpenStreetMap), localizados pela morada; a distância ao centro calcula-se sozinha.
+- **Reservas e pagamentos.** Nas opções escolhidas: estado (por reservar, reservado, pago), código, cancelamento grátis até, já pago e prazo para pagar. Separador Reservas com totais e painel "O que falta" (decidir, reservar, pagar, prazos, avaliações em falta).
 - **Roteiro.** Dias criados a partir das datas, chegada e partida do voo e check-in/out automáticos, planos com hora, tipo e custo, atividades por encaixar, reordenar, imprimir.
 
 ## Onde está

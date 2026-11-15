@@ -1,9 +1,15 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpDown, BedDouble, CalendarDays, CalendarPlus, Check, ExternalLink, Info, LayoutGrid, Pencil, Plane, Plus, Rows3, Ticket,
-  TrainFront, Undo2, Archive, TriangleAlert,
+  TrainFront, Undo2, Archive, TriangleAlert, Map as MapIcon, Ticket as TicketIcon, KeyRound, AlarmClock,
 } from "lucide-react";
+import SearchLinks from "./SearchLinks.jsx";
+import BookingDialog from "./BookingDialog.jsx";
+import { BOOKING_STATES } from "../lib/model.js";
+import { remaining } from "../lib/todo.js";
+import { Skeleton } from "@/components/ui/skeleton";
+const MapView = lazy(() => import("./MapView.jsx"));
 import { CATEGORIES, CATEGORY_KEYS, COST_LEVELS, SEASONS, FIELDS } from "../lib/model.js";
 import { scoreOption, prosCons, destinationPackage, cityRef, lodgingRealCost, nightsOf, COMPONENT_LABELS, COMPONENT_WEIGHTS, roomNight } from "../lib/scoring.js";
 import { eur, num, fmtDate, plural } from "../lib/format.js";
@@ -107,14 +113,19 @@ export default function DestinationView({ ctx }) {
           <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={(v) => v && setView(v)} aria-label="Vista">
             <ToggleGroupItem value="cards" aria-label="Cartões"><LayoutGrid /></ToggleGroupItem>
             <ToggleGroupItem value="table" aria-label="Lado a lado"><Rows3 /></ToggleGroupItem>
+            <ToggleGroupItem value="map" aria-label="Mapa"><MapIcon /></ToggleGroupItem>
           </ToggleGroup>
           <Button size="sm" onClick={() => setForm({ categoria: cat })}><Plus /> {CATEGORIES[cat].one}</Button>
         </div>
       </div>
 
-      {list.length === 0 ? (
+      <SearchLinks dest={dest} trip={ctx.trip} cat={cat} />
+
+      {view === "map" ? (
+        <Suspense fallback={<Skeleton className="h-[480px] rounded-xl" />}><MapView ctx={ctx} dest={dest} scored={list} /></Suspense>
+      ) : list.length === 0 ? (
         <EmptyState icon={CatIcon} title={`Ainda não há ${CATEGORIES[cat].label.toLowerCase()} em ${dest.nome}`} action={<Button onClick={() => setForm({ categoria: cat })}><Plus /> Adicionar {CATEGORIES[cat].one.toLowerCase()}</Button>}>
-          {EMPTY_TEXT[cat]}
+          {EMPTY_TEXT[cat]} Usa os botões de pesquisa acima para abrir os sites já com as vossas datas.
         </EmptyState>
       ) : view === "cards" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -157,6 +168,7 @@ const LEGEND = {
 function OptionCard({ x, ctx, dest, pessoas, top, onEdit }) {
   const { o, score, comp, pros, cons } = x;
   const toast = useToast();
+  const [booking, setBooking] = useState(false);
   const exclusive = o.categoria === "voo" || o.categoria === "alojamento";
   async function choose() {
     if (exclusive && !o.escolhido) {
@@ -211,7 +223,9 @@ function OptionCard({ x, ctx, dest, pessoas, top, onEdit }) {
           ))}
         </div>
         {o.notas && <p className="whitespace-pre-wrap rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">{o.notas}</p>}
+        {o.escolhido && <BookingLine o={o} onOpen={() => setBooking(true)} />}
       </CardContent>
+      {booking && <BookingDialog ctx={ctx} option={o} onClose={() => setBooking(false)} />}
       <CardFooter className="mt-auto flex flex-wrap gap-2 border-t">
         <Button size="sm" variant={o.escolhido ? "secondary" : "default"} onClick={choose}>
           {o.escolhido ? <><Check /> {exclusive ? "Escolhido" : "Incluído"}</> : exclusive ? "Escolher" : "Incluir"}
@@ -226,6 +240,22 @@ function OptionCard({ x, ctx, dest, pessoas, top, onEdit }) {
         </div>
       </CardFooter>
     </Card>
+  );
+}
+
+/* Linha com o estado da reserva de uma opção escolhida. */
+export function BookingLine({ o, onOpen }) {
+  const st = o.reservaEstado || "porReservar";
+  const falta = remaining(o);
+  const tone = st === "pago" ? "border-good/40 bg-good/5" : st === "reservado" ? "border-brand/40 bg-brand/5" : "border-amber-400/50 bg-amber-400/5";
+  return (
+    <button type="button" onClick={onOpen} className={cn("flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60", tone)}>
+      <span className="flex items-center gap-1.5 font-medium"><TicketIcon className="size-4" />{BOOKING_STATES[st].label}</span>
+      {o.reservaCodigo && <span className="flex items-center gap-1 text-muted-foreground"><KeyRound className="size-3.5" />{o.reservaCodigo}</span>}
+      {o.cancelarAte && <span className="flex items-center gap-1 text-muted-foreground"><AlarmClock className="size-3.5" />cancelar até {fmtDate(o.cancelarAte)}</span>}
+      {st !== "porReservar" && <span className={cn("tabular", falta > 0 ? "text-amber-700 dark:text-amber-400" : "text-good")}>{falta > 0 ? `faltam ${eur(falta)}` : "tudo pago"}</span>}
+      <span className="ml-auto text-xs text-muted-foreground underline underline-offset-4">{st === "porReservar" ? "Marcar reserva" : "Gerir"}</span>
+    </button>
   );
 }
 

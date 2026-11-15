@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { LocateFixed, Trash2 } from "lucide-react";
+import { geocode, kmBetween } from "../lib/geo.js";
 import { CATEGORIES, FIELDS } from "../lib/model.js";
 import { nightsOf } from "../lib/scoring.js";
 import { ConfirmButton, Field, Stars } from "./common.jsx";
@@ -43,8 +44,23 @@ export default function OptionForm({ ctx, dest, categoria, option, onClose }) {
     obj.noites = toNum(f.noites);
     obj.prosMeus = lines(prosTxt);
     obj.contrasMeus = lines(consTxt);
+    const mappable = categoria === "alojamento" || categoria === "atividade";
+    const moved = (f.morada || "") !== (option?.morada || "");
+    if (mappable && f.morada && (moved || !f.lat)) {
+      const g = await geocode(`${f.morada}, ${dest.nome}`);
+      if (g) { obj.lat = g.lat; obj.lng = g.lng; }
+    }
+    if (categoria === "alojamento" && obj.distancia == null && obj.lat && dest.lat) obj.distancia = kmBetween(dest, obj);
     await ctx.upsert("options", obj);
     onClose();
+  }
+  const [locMsg, setLocMsg] = useState("");
+  async function locateNow() {
+    setLocMsg("A procurar…");
+    const g = await geocode(`${f.morada || f.nome}, ${dest.nome}`);
+    if (!g) return setLocMsg("Não encontrei. Escreve a morada completa.");
+    setF((x) => ({ ...x, lat: g.lat, lng: g.lng, ...(categoria === "alojamento" && (x.distancia === "" || x.distancia == null) && dest.lat ? { distancia: kmBetween(dest, g) } : {}) }));
+    setLocMsg(`Encontrado: ${g.label.split(",").slice(0, 3).join(",")}`);
   }
 
   return (
@@ -69,6 +85,12 @@ export default function OptionForm({ ctx, dest, categoria, option, onClose }) {
                   {fd.label}<Switch id={`of-${fd.k}`} checked={!!f[fd.k]} onCheckedChange={(v) => set(fd.k, v)} />
                 </label>
               ))}
+            </div>
+          )}
+          {(categoria === "alojamento" || categoria === "atividade") && (
+            <div className="flex flex-wrap items-center gap-2 text-sm sm:col-span-3">
+              <Button type="button" size="sm" variant="outline" onClick={locateNow}><LocateFixed /> Localizar no mapa</Button>
+              <span className="text-muted-foreground">{locMsg || (f.lat ? "Já está no mapa." : "Usa a morada (ou o nome) para o pôr no mapa e calcular a distância ao centro.")}</span>
             </div>
           )}
           <Separator className="sm:col-span-3" />
