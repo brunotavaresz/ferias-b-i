@@ -154,7 +154,7 @@ export function prosCons(o, dest, pessoas, siblings = []) {
       else if (n(o.distancia) > 2.5) C.push(`Longe do centro (${o.distancia} km)`);
     }
     const bf = cityRef(dest).pequenoAlmoco * (pessoas || 2) * (nights || 1);
-    if (o.pequenoAlmoco) P.push(`Pequeno-almoço incluído (vale ~${eur(bf)})`); else C.push(`Sem pequeno-almoço (+~${eur(bf)})`);
+    if (o.pequenoAlmoco) P.push(`Pequeno-almoço incluído (vale ~${eur(bf)})`); else C.push(`Sem pequeno-almoço (mais ~${eur(bf)})`);
     if (o.cancelamento) P.push("Cancelamento grátis"); else C.push("Sem cancelamento grátis (ou por confirmar)");
     if (o.pagarHotel) P.push("Paga só no alojamento");
     if (o.cozinha) P.push("Cozinha: poupa nas refeições");

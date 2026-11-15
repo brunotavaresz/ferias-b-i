@@ -1,21 +1,36 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  BedDouble, CalendarDays, Check, CloudSun, Heart, LayoutGrid, MapPin, Pencil, Plane, Plus, Rows3, SlidersHorizontal, TriangleAlert, Wallet,
+} from "lucide-react";
 import { destinationPackage, compareDestinations } from "../lib/scoring.js";
 import { COST_LEVELS, SEASONS } from "../lib/model.js";
 import { eur, fmtDate, plural } from "../lib/format.js";
-import { Ring, Meter, Stars, WeightDots, Empty, Seg } from "./ui.jsx";
+import { EmptyState, Meter, ScoreRing, Stars, WeightControl } from "./common.jsx";
 import DestinationForm from "./DestinationForm.jsx";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const COST_PARTS = [
-  ["voo", "Voos", "var(--c1)"], ["alojamento", "Alojamento", "var(--c2)"], ["transportes", "Transportes", "var(--c3)"],
-  ["atividades", "Atividades", "var(--c4)"], ["diaADia", "Dia a dia", "var(--c5)"],
+  ["voo", "Voos", "bg-chart-1"], ["alojamento", "Alojamento", "bg-chart-2"], ["transportes", "Transportes", "bg-chart-3"],
+  ["atividades", "Atividades", "bg-chart-4"], ["diaADia", "Dia a dia", "bg-chart-5"],
 ];
-const PART_LABELS = { custo: "Custo", qualidade: "Alojamento", logistica: "Voos e horários", interesse: "Interesse", clima: "Clima" };
+const PARTS = [
+  ["custo", "Custo", Wallet], ["qualidade", "Alojamento", BedDouble], ["logistica", "Voos e horários", Plane],
+  ["interesse", "Interesse", Heart], ["clima", "Clima", CloudSun],
+];
 
 export default function Destinations({ ctx }) {
   const { trip, destinations, options, items } = ctx;
   const [form, setForm] = useState(null);
   const [view, setView] = useState("cards");
+  const [showWeights, setShowWeights] = useState(false);
   const nav = useNavigate();
   const ranked = useMemo(() => compareDestinations(
     destinations.map((d) => destinationPackage(d, options, items, trip)), trip.weights,
@@ -23,38 +38,54 @@ export default function Destinations({ ctx }) {
   const maxTotal = Math.max(1, ...ranked.map((p) => p.porPessoa));
   const setW = (k, v) => ctx.updateTrip({ weights: { ...trip.weights, [k]: v } });
 
+  const formEl = form && <DestinationForm ctx={ctx} dest={form === "new" ? null : form} onClose={() => setForm(null)} onSaved={form === "new" ? (id) => nav(`${ctx.base}/d/${id}`) : undefined} />;
   if (!destinations.length) {
     return (
       <>
-        <Empty title="Que destinos estão a pensar?" action={<button className="btn primary" onClick={() => setForm("new")}>+ Adicionar destino</button>}>
-          <p>Adiciona cada hipótese (Côte d'Azur, Roma…) com as datas. Depois guarda lá dentro os voos, alojamentos, transportes e atividades que forem encontrando. A app soma tudo e compara os destinos pelo custo real por pessoa, pela qualidade e pelo que vos interessa.</p>
-        </Empty>
-        {form && <DestinationForm ctx={ctx} onClose={() => setForm(null)} onSaved={(id) => nav(`${ctx.base}/d/${id}`)} />}
+        <EmptyState icon={MapPin} title="Que destinos estão a pensar?" action={<Button onClick={() => setForm("new")}><Plus /> Adicionar destino</Button>}>
+          Adiciona cada hipótese (Côte d'Azur, Roma…) com as datas. Depois guarda lá dentro os voos, alojamentos, transportes e atividades que forem encontrando. A app soma tudo e compara os destinos pelo custo real por pessoa, pela qualidade e pelo que vos interessa.
+        </EmptyState>
+        {formEl}
       </>
     );
   }
 
   return (
-    <div className="stack">
-      <div className="toolbar">
-        <div className="weights">
-          <span className="t">Na escolha do destino, o que pesa mais?</span>
-          {Object.entries(PART_LABELS).map(([k, l]) => <WeightDots key={k} label={l} value={trip.weights[k] ?? 0} onChange={(v) => setW(k, v)} />)}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Destinos</h2>
+          <p className="text-sm text-muted-foreground">{plural(ranked.length, "destino", "destinos")} · ordenados pelo que pesa mais para vocês</p>
         </div>
-        <div className="row">
-          {ranked.length > 1 && <Seg value={view} onChange={setView} label="Vista" options={[["cards", "Cartões"], ["table", "Lado a lado"]]} />}
-          <button className="btn primary" onClick={() => setForm("new")}>+ Destino</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant={showWeights ? "secondary" : "outline"} onClick={() => setShowWeights((s) => !s)}><SlidersHorizontal /> Prioridades</Button>
+          {ranked.length > 1 && (
+            <ToggleGroup type="single" variant="outline" value={view} onValueChange={(v) => v && setView(v)} aria-label="Vista">
+              <ToggleGroupItem value="cards" aria-label="Cartões"><LayoutGrid /></ToggleGroupItem>
+              <ToggleGroupItem value="table" aria-label="Lado a lado"><Rows3 /></ToggleGroupItem>
+            </ToggleGroup>
+          )}
+          <Button onClick={() => setForm("new")}><Plus /> Destino</Button>
         </div>
       </div>
 
+      {showWeights && (
+        <Card className="gap-4 py-5">
+          <CardHeader className="px-5"><CardTitle className="text-base">Na escolha do destino, o que pesa mais?</CardTitle><CardDescription>Toca nos segmentos. Zero ignora o critério.</CardDescription></CardHeader>
+          <CardContent className="grid gap-5 px-5 sm:grid-cols-3 lg:grid-cols-5">
+            {PARTS.map(([k, l, I]) => <WeightControl key={k} icon={I} label={l} value={trip.weights[k] ?? 0} onChange={(v) => setW(k, v)} />)}
+          </CardContent>
+        </Card>
+      )}
+
       {view === "cards" || ranked.length < 2 ? (
-        <div className="grid2">
+        <div className="grid gap-4 lg:grid-cols-2">
           {ranked.map((p, i) => <DestCard key={p.dest.id} p={p} rank={i + 1} n={ranked.length} ctx={ctx} maxTotal={maxTotal} onEdit={() => setForm(p.dest)} />)}
         </div>
       ) : <DestTable ranked={ranked} ctx={ctx} />}
 
-      <p className="legend">O custo inclui o voo e o alojamento escolhidos (ou, se ainda não escolheram, os melhor pontuados), os transportes e as atividades marcados como "Incluir", e uma estimativa do dia a dia (comida, entradas, transportes locais) para o nível de preços da cidade e a época. Os destinos são comparados pelo custo por pessoa e por dia, para uma viagem mais longa não sair castigada.</p>
-      {form && <DestinationForm ctx={ctx} dest={form === "new" ? null : form} onClose={() => setForm(null)} />}
+      <p className="max-w-3xl text-xs text-muted-foreground">O custo junta o voo e o alojamento escolhidos (ou, enquanto não escolherem, os melhor pontuados), os transportes e atividades marcados como "Incluir" e uma estimativa do dia a dia para o nível de preços e a época. Os destinos comparam-se pelo custo por pessoa e por dia, para uma viagem mais longa não sair castigada.</p>
+      {formEl}
     </div>
   );
 }
@@ -64,67 +95,72 @@ function DestCard({ p, rank, n, ctx, maxTotal, onEdit }) {
   const first = rank === 1 && n > 1;
   const over = ctx.trip.orcamento && p.porPessoa > ctx.trip.orcamento;
   return (
-    <article className={"card dest" + (first ? " first" : "") + (dest.escolhido ? " chosen" : "")}>
-      <div className="chead">
-        <Ring value={p.score} highlight={first} />
-        <div className="ctitle">
-          <h3><Link to={`${ctx.base}/d/${dest.id}`}>{dest.nome}</Link></h3>
-          <div className="meta">{[dest.pais, dest.inicio && `${fmtDate(dest.inicio)} – ${fmtDate(dest.fim)}`, p.nights && plural(p.nights, "noite", "noites")].filter(Boolean).join(" · ") || "Sem datas"}</div>
-          <div className="chips">
-            <span className="chip">{COST_LEVELS[dest.nivelPreco]?.label || "Médio"}</span>
-            <span className="chip">{SEASONS[dest.epoca]?.label || "Época média"}</span>
-            {dest.escolhido && <span className="chip lemon">O nosso destino</span>}
+    <Card className={cn("gap-5", first && "ring-2 ring-amber-400/70", dest.escolhido && "ring-2 ring-good/60")}>
+      <CardHeader>
+        <div className="flex items-start gap-4">
+          <ScoreRing value={p.score} highlight={first} />
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle className="text-xl"><Link to={`${ctx.base}/d/${dest.id}`} className="hover:underline underline-offset-4">{dest.nome}</Link>{dest.pais && <span className="font-normal text-muted-foreground">, {dest.pais}</span>}</CardTitle>
+            <CardDescription className="flex items-center gap-1.5"><CalendarDays className="size-3.5" />{dest.inicio ? `${fmtDate(dest.inicio)} – ${fmtDate(dest.fim)}` : "Sem datas"}{p.nights ? ` · ${plural(p.nights, "noite", "noites")}` : ""}</CardDescription>
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <Badge variant="secondary">{COST_LEVELS[dest.nivelPreco]?.label || "Médio"}</Badge>
+              <Badge variant="secondary">{SEASONS[dest.epoca]?.label || "Época média"}</Badge>
+              {dest.escolhido && <Badge className="bg-good text-white"><Check /> O nosso destino</Badge>}
+            </div>
           </div>
         </div>
-        <span className="pos">{n > 1 ? `${rank}.º` : ""}</span>
-      </div>
+        {n > 1 && <CardAction><Badge variant={first ? "default" : "outline"} className={first ? "bg-amber-400 text-amber-950" : ""}>{rank}.º</Badge></CardAction>}
+      </CardHeader>
 
-      <div className="money">
-        <div><span className="big num">{eur(p.porPessoa)}</span><span className="muted"> por pessoa</span></div>
-        <div className="muted num">{eur(p.total)} no total{p.porPessoaDia ? ` · ${eur(p.porPessoaDia)}/pessoa/dia` : ""}</div>
-        {over && <div className="warnline">Acima do orçamento ({eur(ctx.trip.orcamento)}/pessoa) em {eur(p.porPessoa - ctx.trip.orcamento)}</div>}
-      </div>
-      <CostBar p={p} maxTotal={maxTotal} />
+      <CardContent className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div><span className="text-3xl font-semibold tracking-tight tabular">{eur(p.porPessoa)}</span><span className="text-sm text-muted-foreground"> por pessoa</span></div>
+          <span className="text-sm text-muted-foreground tabular">{eur(p.total)} total{p.porPessoaDia ? ` · ${eur(p.porPessoaDia)}/dia` : ""}</span>
+        </div>
+        {over && <p className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2.5 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-400"><TriangleAlert className="size-4" />{eur(p.porPessoa - ctx.trip.orcamento)} acima do orçamento ({eur(ctx.trip.orcamento)}/pessoa)</p>}
 
-      <div className="meters">
-        {Object.entries(PART_LABELS).map(([k, l]) => <Meter key={k} label={l} value={p.parts[k]} />)}
-      </div>
+        <div className="space-y-2">
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-muted" style={{ width: `${Math.max(10, (p.porPessoa / maxTotal) * 100)}%` }}>
+            {COST_PARTS.map(([k, l, color]) => {
+              const v = (p.custos[k] || 0) / p.pessoas;
+              return v > 0 ? (
+                <Tooltip key={k}><TooltipTrigger asChild><div className={cn("h-full", color)} style={{ flexGrow: v }} /></TooltipTrigger><TooltipContent>{l}: {eur(v)}/pessoa</TooltipContent></Tooltip>
+              ) : null;
+            })}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {COST_PARTS.map(([k, l, color]) => (p.custos[k] ? <span key={k} className="flex items-center gap-1.5"><span className={cn("size-2 rounded-full", color)} />{l} <span className="font-medium text-foreground tabular">{eur(p.custos[k] / p.pessoas)}</span></span> : null))}
+          </div>
+        </div>
 
-      <div className="ratings">
-        <span className="muted">Interesse</span>
-        {ctx.raters.map((r) => (
-          <span key={r.email} className="rater"><span className="rname">{r.name}</span>
-            <Stars size="sm" label={`Interesse de ${r.name}`} readOnly={!ctx.canRate(r.email)} value={dest.ratings?.[r.email] ?? null}
-              onChange={(v) => ctx.upsert("destinations", { id: dest.id, ratings: { ...(dest.ratings || {}), [r.email]: v } })} /></span>
-        ))}
-      </div>
+        <Separator />
+        <div className="space-y-2.5">{PARTS.map(([k, l]) => <Meter key={k} label={l} value={p.parts[k]} />)}</div>
 
-      {p.avisos.length > 0 && <ul className="avisos">{p.avisos.map((a) => <li key={a}>{a}</li>)}</ul>}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Interesse</span>
+          {ctx.raters.map((r) => (
+            <span key={r.email} className="flex items-center gap-2"><span className="font-medium">{r.name}</span>
+              <Stars size="sm" label={`Interesse de ${r.name}`} readOnly={!ctx.canRate(r.email)} value={dest.ratings?.[r.email] ?? null}
+                onChange={(v) => ctx.upsert("destinations", { id: dest.id, ratings: { ...(dest.ratings || {}), [r.email]: v } })} /></span>
+          ))}
+        </div>
 
-      <div className="cactions">
-        <Link className="btn primary sm" to={`${ctx.base}/d/${dest.id}`}>Ver opções</Link>
-        <Link className="btn sm" to={`${ctx.base}/roteiro/${dest.id}`}>Roteiro</Link>
-        <button className="btn sm" onClick={onEdit}>Editar</button>
-        <button className={"btn sm" + (dest.escolhido ? " on" : "")} onClick={() => ctx.upsert("destinations", { id: dest.id, escolhido: !dest.escolhido })}>{dest.escolhido ? "✓ Escolhido" : "É este!"}</button>
-      </div>
-    </article>
-  );
-}
+        {p.avisos.length > 0 && (
+          <ul className="space-y-1 text-sm text-amber-700 dark:text-amber-400">
+            {p.avisos.map((a) => <li key={a} className="flex items-center gap-2"><TriangleAlert className="size-3.5 shrink-0" />{a}</li>)}
+          </ul>
+        )}
+      </CardContent>
 
-function CostBar({ p, maxTotal }) {
-  const total = p.porPessoa || 0;
-  return (
-    <div className="costbar">
-      <div className="cbtrack" style={{ width: `${Math.max(8, (total / maxTotal) * 100)}%` }} aria-hidden="true">
-        {COST_PARTS.map(([k, , color]) => {
-          const v = (p.custos[k] || 0) / p.pessoas;
-          return v > 0 ? <i key={k} style={{ flexGrow: v, background: color }} title={`${k}: ${eur(v)}/pessoa`} /> : null;
-        })}
-      </div>
-      <div className="cblegend">
-        {COST_PARTS.map(([k, l, color]) => (p.custos[k] ? <span key={k}><i style={{ background: color }} />{l} <b className="num">{eur(p.custos[k] / p.pessoas)}</b></span> : null))}
-      </div>
-    </div>
+      <CardFooter className="flex flex-wrap gap-2 border-t">
+        <Button asChild size="sm"><Link to={`${ctx.base}/d/${dest.id}`}>Ver opções</Link></Button>
+        <Button asChild size="sm" variant="outline"><Link to={`${ctx.base}/roteiro/${dest.id}`}><CalendarDays /> Roteiro</Link></Button>
+        <Button size="sm" variant="ghost" onClick={onEdit}><Pencil /> Editar</Button>
+        <Button size="sm" variant={dest.escolhido ? "secondary" : "ghost"} className="ml-auto" onClick={() => ctx.upsert("destinations", { id: dest.id, escolhido: !dest.escolhido })}>
+          {dest.escolhido ? <><Check /> Escolhido</> : <><Heart /> É este!</>}
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -140,28 +176,42 @@ function DestTable({ ranked, ctx }) {
     ["Atividades", (p) => p.custos.atividades, "min", eur],
     ["Dia a dia (estimado)", (p) => p.custos.diaADia, "min", eur],
     ["Noites", (p) => p.nights, null, (v) => v ?? "—"],
-    ...Object.entries(PART_LABELS).filter(([k]) => k !== "custo").map(([k, l]) => [l, (p) => (p.parts[k] == null ? null : Math.round(p.parts[k] * 100)), "max", (v) => (v == null ? "—" : `${v}/100`)]),
+    ...PARTS.filter(([k]) => k !== "custo").map(([k, l]) => [l, (p) => (p.parts[k] == null ? null : Math.round(p.parts[k] * 100)), "max", (v) => (v == null ? "—" : `${v}/100`)]),
     ["Voo", (p) => p.voo.opt?.nome || null, null, (v) => v || "—"],
-    ["Alojamento escolhido", (p) => p.aloj.opt?.nome || null, null, (v) => v || "—"],
+    ["Alojamento", (p) => p.aloj.opt?.nome || null, null, (v) => v || "—"],
   ];
+  return <CompareTable heads={ranked.map((p) => ({ id: p.dest.id, label: <Link to={`${ctx.base}/d/${p.dest.id}`} className="hover:underline">{p.dest.nome}</Link> }))} rows={rows} items={ranked} />;
+}
+
+/* Tabela lado a lado: verde no melhor de cada linha, vermelho no pior. */
+export function CompareTable({ heads, rows, items }) {
   return (
-    <div className="tablewrap">
-      <table>
-        <thead><tr><th />{ranked.map((p) => <th key={p.dest.id}><Link to={`${ctx.base}/d/${p.dest.id}`}>{p.dest.nome}</Link></th>)}</tr></thead>
-        <tbody>
-          {rows.map(([label, get, dir, fmt]) => {
-            const vals = ranked.map(get);
+    <Card className="py-0">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="sticky left-0 z-10 bg-card" />
+            {heads.map((h) => <TableHead key={h.id} className="min-w-36 font-semibold text-foreground">{h.label}</TableHead>)}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(([label, get, dir, fmt], ri) => {
+            const vals = items.map(get);
             const nums = vals.filter((v) => typeof v === "number");
             const best = dir === "min" ? Math.min(...nums) : Math.max(...nums);
             const worst = dir === "min" ? Math.max(...nums) : Math.min(...nums);
             return (
-              <tr key={label}><td className="rh">{label}</td>
-                {vals.map((v, i) => <td key={i} className={"num " + (dir && nums.length > 1 && best !== worst && typeof v === "number" ? (v === best ? "best" : v === worst ? "worst" : "") : "")}>{fmt(v)}</td>)}
-              </tr>
+              <TableRow key={label + ri}>
+                <TableCell className="sticky left-0 z-10 bg-card text-muted-foreground">{label}</TableCell>
+                {vals.map((v, i) => {
+                  const mark = dir && nums.length > 1 && best !== worst && typeof v === "number" ? (v === best ? "best" : v === worst ? "worst" : "") : "";
+                  return <TableCell key={i} className={cn("tabular", mark === "best" && "font-semibold text-good", mark === "worst" && "text-bad")}>{mark === "best" && <Check className="mr-1 inline size-3.5" />}{fmt(v)}</TableCell>;
+                })}
+              </TableRow>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

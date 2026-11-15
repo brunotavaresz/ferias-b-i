@@ -1,5 +1,7 @@
 # Férias a Dois
 
+Feito com React, [shadcn/ui](https://ui.shadcn.com) (Tailwind CSS v4 + Radix), ícones Lucide e Firebase.
+
 App para planear férias a dois: guardar destinos possíveis e, em cada um, voos, alojamentos, transportes e atividades; comparar tudo com as vossas prioridades; montar o roteiro dia a dia.
 
 ## O que faz
@@ -57,7 +59,8 @@ src/
     DestinationView.jsx opções por categoria (cartões e tabela)
     OptionForm.jsx, DestinationForm.jsx
     Itinerary.jsx       roteiro dia a dia
-    ui.jsx              modal, anel de pontuação, barras, estrelas, pesos, toasts
+    common.jsx          anel de pontuação, barras, estrelas, pesos, vantagens/desvantagens, toasts
+    ui/                 componentes shadcn/ui (Radix + Tailwind v4), copiados do repositório do shadcn
 ```
 
 Dados no Firestore: `trips/{tripId}` com `destinations`, `options` e `items` como subcoleções.

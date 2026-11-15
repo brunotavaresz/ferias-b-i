@@ -1,25 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
-import { Routes, Route, NavLink, useParams, useNavigate, Link } from "react-router-dom";
+import { Routes, Route, useParams, useNavigate, Link, useLocation } from "react-router-dom";
+import { ArrowLeft, CalendarDays, MapPinned, Settings2, Trash2, UserPlus, X } from "lucide-react";
 import { store } from "../lib/store.js";
 import { firebaseEnabled } from "../lib/firebase.js";
 import { DEFAULT_WEIGHTS } from "../lib/model.js";
-import { Modal, ConfirmButton, useToast } from "./ui.jsx";
+import { initials } from "../lib/format.js";
+import { ConfirmButton, Field, useToast } from "./common.jsx";
 import Destinations from "./Destinations.jsx";
 import DestinationView from "./DestinationView.jsx";
 import Itinerary from "./Itinerary.jsx";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function TripView({ user }) {
   const { tripId } = useParams();
   const [data, setData] = useState(undefined);
   const [settings, setSettings] = useState(false);
   const toast = useToast();
-  useEffect(() => store.watchTrip(tripId, setData, () => toast("Sem acesso a esta viagem ou erro de ligação.", "err")), [tripId, toast]);
+  const nav = useNavigate();
+  const loc = useLocation();
+  useEffect(() => store.watchTrip(tripId, setData, () => toast("Sem acesso a esta viagem ou erro de ligação.", "err")), [tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ctx = useMemo(() => {
     if (!data?.trip) return null;
     const trip = { ...data.trip, weights: { ...DEFAULT_WEIGHTS, ...(data.trip.weights || {}) } };
     const members = trip.members || [];
-    const nameOf = (email) => trip.memberNames?.[email] || (email === user.email ? user.name : email.split("@")[0]);
+    const nameOf = (email) => trip.memberNames?.[email]?.split(" ")[0] || (email === user.email ? user.name?.split(" ")[0] : email.split("@")[0]);
     return {
       ...data, trip, user,
       raters: members.map((e) => ({ email: e, name: nameOf(e), me: e === user.email })),
@@ -29,32 +42,47 @@ export default function TripView({ user }) {
       updateTrip: (patch) => store.updateTrip(tripId, patch).catch(() => toast("Não foi possível guardar.", "err")),
       base: `/t/${tripId}`,
     };
-  }, [data, user, tripId, toast]);
+  }, [data, user, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // guarda o nome de quem entra, para os outros verem
   useEffect(() => {
     if (!firebaseEnabled || !ctx) return;
     if (!ctx.trip.memberNames?.[user.email]) ctx.updateTrip({ memberNames: { ...(ctx.trip.memberNames || {}), [user.email]: user.name } });
   }, [ctx, user]);
 
-  if (data === undefined) return <div className="page muted">A carregar…</div>;
-  if (!ctx) return <div className="page"><p>Esta viagem não existe ou não tens acesso.</p><Link className="btn" to="/">Voltar às viagens</Link></div>;
+  if (data === undefined) return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-64 rounded-xl" /></div>;
+  if (!ctx) return <div className="space-y-4"><p>Esta viagem não existe ou não tens acesso.</p><Button variant="outline" asChild><Link to="/">Voltar às viagens</Link></Button></div>;
 
+  const tab = loc.pathname.includes("/roteiro") ? "roteiro" : "destinos";
   return (
-    <div className="page">
-      <div className="triphead">
-        <div>
-          <Link to="/" className="kicker back">← Viagens</Link>
-          <h1>{ctx.trip.nome}</h1>
-          <div className="members">
-            {ctx.raters.map((r) => <span key={r.email} className="pill">{r.name}{r.me ? " (tu)" : ""}</span>)}
-            <button className="btn ghost sm" onClick={() => setSettings(true)}>Partilhar e definições</button>
+    <div className="space-y-6">
+      <div className="no-print space-y-4">
+        <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" asChild><Link to="/"><ArrowLeft /> Viagens</Link></Button>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="space-y-3">
+            <h1 className="text-3xl font-semibold tracking-tight">{ctx.trip.nome}</h1>
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2">
+                {ctx.raters.map((r) => (
+                  <Tooltip key={r.email}>
+                    <TooltipTrigger asChild>
+                      <Avatar className="size-7 border-2 border-background"><AvatarFallback className="text-[11px]">{initials(r.name)}</AvatarFallback></Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>{r.name}{r.me ? " (tu)" : ""} · {r.email}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setSettings(true)}><UserPlus /> Partilhar</Button>
+              <Button variant="ghost" size="icon-sm" aria-label="Definições" onClick={() => setSettings(true)}><Settings2 /></Button>
+            </div>
           </div>
+          <Tabs value={tab} onValueChange={(v) => nav(v === "roteiro" ? `${ctx.base}/roteiro` : ctx.base)}>
+            <TabsList>
+              <TabsTrigger value="destinos"><MapPinned /> Destinos</TabsTrigger>
+              <TabsTrigger value="roteiro"><CalendarDays /> Roteiro</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
-        <nav className="tabs">
-          <NavLink end to={ctx.base}>Destinos</NavLink>
-          <NavLink to={`${ctx.base}/roteiro`}>Roteiro</NavLink>
-        </nav>
+        <Separator />
       </div>
       <Routes>
         <Route index element={<Destinations ctx={ctx} />} />
@@ -62,22 +90,24 @@ export default function TripView({ user }) {
         <Route path="roteiro" element={<Itinerary ctx={ctx} />} />
         <Route path="roteiro/:destId" element={<Itinerary ctx={ctx} />} />
       </Routes>
-      {settings && <TripSettings ctx={ctx} onClose={() => setSettings(false)} />}
+      <TripSettings ctx={ctx} open={settings} onOpenChange={setSettings} />
     </div>
   );
 }
 
-function TripSettings({ ctx, onClose }) {
+function TripSettings({ ctx, open, onOpenChange }) {
   const { trip, user } = ctx;
-  const [f, setF] = useState({ nome: trip.nome || "", pessoas: trip.pessoas || 2, orcamento: trip.orcamento ?? "", notas: trip.notas || "" });
+  const [f, setF] = useState(null);
   const [email, setEmail] = useState("");
   const nav = useNavigate();
   const toast = useToast();
+  useEffect(() => { if (open) setF({ nome: trip.nome || "", pessoas: trip.pessoas || 2, orcamento: trip.orcamento ?? "", notas: trip.notas || "" }); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const isOwner = trip.ownerUid === user.uid;
   async function save(e) {
     e.preventDefault();
     await ctx.updateTrip({ nome: f.nome.trim() || "Férias", pessoas: Number(f.pessoas) || 2, orcamento: f.orcamento === "" ? null : Number(f.orcamento), notas: f.notas });
-    onClose();
+    onOpenChange(false);
+    toast("Guardado");
   }
   async function addMember(e) {
     e.preventDefault();
@@ -88,32 +118,43 @@ function TripSettings({ ctx, onClose }) {
     setEmail("");
     toast(firebaseEnabled ? "Pronto. Quando entrar com esse email Google, vê esta viagem." : "Adicionado (no modo local serve só para as avaliações).");
   }
-  async function removeMember(em) {
-    await ctx.updateTrip({ members: (trip.members || []).filter((x) => x !== em) });
-  }
   return (
-    <Modal title="Partilhar e definições" onClose={onClose}
-      footer={<>{isOwner && <ConfirmButton confirmText="Apagar mesmo a viagem?" onConfirm={async () => { await store.deleteTrip(trip.id); nav("/"); }}>Apagar viagem</ConfirmButton>}<span className="sp" /><button className="btn" onClick={onClose}>Fechar</button><button className="btn primary" form="ts">Guardar</button></>}>
-      <section className="msec">
-        <h3>Quem tem acesso</h3>
-        <ul className="memberlist">
-          {(trip.members || []).map((em) => (
-            <li key={em}><span>{trip.memberNames?.[em] ? <><b>{trip.memberNames[em]}</b> · </> : null}{em}</span>
-              {em !== user.email && <button className="btn ghost sm" onClick={() => removeMember(em)}>Remover</button>}</li>
-          ))}
-        </ul>
-        <form className="row" onSubmit={addMember}>
-          <input aria-label="Email da pessoa a convidar" type="email" placeholder="email Google da tua namorada" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <button className="btn">Dar acesso</button>
-        </form>
-        <p className="hint">{firebaseEnabled ? "A pessoa entra na app com essa conta Google e a viagem aparece-lhe logo. Tudo o que um muda, o outro vê na hora." : "Modo local: os dados ficam só neste browser. Configura o Firebase para partilhar (ver README)."}</p>
-      </section>
-      <form id="ts" className="form" onSubmit={save}>
-        <label className="field full" htmlFor="ts-n">Nome<input id="ts-n" value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></label>
-        <label className="field" htmlFor="ts-p">Viajantes<input id="ts-p" type="number" min="1" value={f.pessoas} onChange={(e) => setF({ ...f, pessoas: e.target.value })} /></label>
-        <label className="field" htmlFor="ts-o">Orçamento por pessoa (€)<input id="ts-o" type="number" min="0" value={f.orcamento} onChange={(e) => setF({ ...f, orcamento: e.target.value })} /></label>
-        <label className="field full" htmlFor="ts-x">Notas<textarea id="ts-x" value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} /></label>
-      </form>
-    </Modal>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Partilhar e definições</DialogTitle>
+          <DialogDescription>{firebaseEnabled ? "Quem está na lista entra com a conta Google e vê e edita tudo em tempo real." : "Modo local: os dados ficam só neste browser."}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm font-medium">Quem tem acesso</p>
+          <ul className="divide-y rounded-lg border">
+            {(trip.members || []).map((em) => (
+              <li key={em} className="flex items-center gap-3 px-3 py-2">
+                <Avatar className="size-7"><AvatarFallback className="text-[11px]">{initials(trip.memberNames?.[em] || em)}</AvatarFallback></Avatar>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{trip.memberNames?.[em] || em.split("@")[0]}{em === user.email && <span className="text-muted-foreground"> (tu)</span>}</p><p className="truncate text-xs text-muted-foreground">{em}</p></div>
+                {em !== user.email && <Button variant="ghost" size="icon-sm" aria-label={`Remover ${em}`} onClick={() => ctx.updateTrip({ members: trip.members.filter((x) => x !== em) })}><X /></Button>}
+              </li>
+            ))}
+          </ul>
+          <form className="flex gap-2" onSubmit={addMember}>
+            <Input aria-label="Email Google a convidar" type="email" placeholder="email Google de quem convidas" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Button type="submit" variant="secondary"><UserPlus /> Dar acesso</Button>
+          </form>
+        </div>
+        <Separator />
+        {f && (
+          <form id="ts" className="grid gap-4 sm:grid-cols-2" onSubmit={save}>
+            <Field label="Nome" htmlFor="ts-n" className="sm:col-span-2"><Input id="ts-n" value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} /></Field>
+            <Field label="Viajantes" htmlFor="ts-p"><Input id="ts-p" type="number" min="1" value={f.pessoas} onChange={(e) => setF({ ...f, pessoas: e.target.value })} /></Field>
+            <Field label="Orçamento por pessoa (€)" htmlFor="ts-o"><Input id="ts-o" type="number" min="0" value={f.orcamento} onChange={(e) => setF({ ...f, orcamento: e.target.value })} /></Field>
+            <Field label="Notas" htmlFor="ts-x" className="sm:col-span-2"><Textarea id="ts-x" value={f.notas} onChange={(e) => setF({ ...f, notas: e.target.value })} /></Field>
+          </form>
+        )}
+        <DialogFooter className="sm:justify-between">
+          {isOwner ? <ConfirmButton variant="ghost" size="default" confirmText="Apagar mesmo a viagem?" onConfirm={async () => { await store.deleteTrip(trip.id); nav("/"); }}><Trash2 /> Apagar viagem</ConfirmButton> : <span />}
+          <div className="flex gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button><Button type="submit" form="ts">Guardar</Button></div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
