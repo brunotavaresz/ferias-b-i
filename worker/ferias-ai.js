@@ -51,14 +51,30 @@ export default {
       const m = /^data:(image\/[a-z+]+);base64,(.+)$/i.exec(img || "");
       if (m) parts.push({ inline_data: { mime_type: m[1], data: m[2] } });
     }
-    const model = env.GEMINI_MODEL || "gemini-flash-latest";
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-      body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } }),
-    });
-    if (r.status === 429) return json({ error: "Limite gratuito do Gemini atingido por agora. Tenta daqui a um minuto." }, 429);
-    if (!r.ok) return json({ error: `O Gemini respondeu com erro ${r.status}.`, detail: (await r.text()).slice(0, 400) }, 502);
+    // Tenta vários modelos: se um estiver sobrecarregado (503), sem quota (429) ou não existir (404), passa ao seguinte.
+    const models = [env.GEMINI_MODEL, "gemini-flash-latest", "gemini-2.5-flash", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"].filter((m, i, a) => m && a.indexOf(m) === i);
+    let r, lastErr = "";
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+          body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json", temperature: 0.1 } }),
+        });
+        if (r.ok) break;
+        lastErr = `${model}: ${r.status}`;
+        if (r.status !== 503) break;
+        await new Promise((ok) => setTimeout(ok, 1200));
+      }
+      if (r.ok) break;
+      if (![404, 429, 503].includes(r.status)) break;
+    }
+    if (!r.ok) {
+      const msg = r.status === 429 ? "Limite gratuito do Gemini atingido por agora. Tenta daqui a um minuto."
+        : r.status === 503 ? "O Gemini está sobrecarregado neste momento. Tenta daqui a um bocadinho."
+        : `O Gemini respondeu com erro ${r.status}.`;
+      return json({ error: msg, detail: `${lastErr} ${(await r.text()).slice(0, 300)}` }, r.status === 429 ? 429 : 502);
+    }
     const data = await r.json();
     const out = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || "").join("") || "";
     try {
