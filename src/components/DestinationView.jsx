@@ -2,11 +2,12 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowUpDown, BedDouble, CalendarDays, CalendarPlus, Check, ExternalLink, Info, LayoutGrid, Pencil, Plane, Plus, Rows3, Ticket,
-  TrainFront, Undo2, Archive, TriangleAlert, Map as MapIcon, Ticket as TicketIcon, KeyRound, AlarmClock,
+  TrainFront, Undo2, Archive, TriangleAlert, ClipboardPaste, Map as MapIcon, Ticket as TicketIcon, KeyRound, AlarmClock,
 } from "lucide-react";
 import SearchLinks from "./SearchLinks.jsx";
 import BookingDialog from "./BookingDialog.jsx";
 import { BOOKING_STATES } from "../lib/model.js";
+import { CAT_LABEL } from "./CaptureDialog.jsx";
 import { remaining } from "../lib/todo.js";
 import { Skeleton } from "@/components/ui/skeleton";
 const MapView = lazy(() => import("./MapView.jsx"));
@@ -115,7 +116,8 @@ export default function DestinationView({ ctx }) {
             <ToggleGroupItem value="table" aria-label="Lado a lado"><Rows3 /></ToggleGroupItem>
             <ToggleGroupItem value="map" aria-label="Mapa"><MapIcon /></ToggleGroupItem>
           </ToggleGroup>
-          <Button size="sm" onClick={() => setForm({ categoria: cat })}><Plus /> {CATEGORIES[cat].one}</Button>
+          <Button size="sm" variant="outline" onClick={() => setForm({ categoria: cat })}><Plus /> À mão</Button>
+          <Button size="sm" onClick={() => ctx.openCapture(dest.id)}><ClipboardPaste /> Colar página</Button>
         </div>
       </div>
 
@@ -206,6 +208,13 @@ function OptionCard({ x, ctx, dest, pessoas, top, onEdit }) {
           <p className="text-xs text-muted-foreground tabular">{priceLine(o, dest, pessoas)}</p>
         </div>
         <div className="space-y-2">{Object.keys(W).map((k) => <Meter key={k} label={COMPONENT_LABELS[k]} value={comp[k]} text={meterText(k, o, dest, pessoas)} />)}</div>
+        {o.notasCategorias && Object.keys(o.notasCategorias).length > 0 && (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-xs sm:grid-cols-3">
+            {Object.entries(o.notasCategorias).map(([k, v]) => (
+              <span key={k} className="flex justify-between gap-2"><span className="text-muted-foreground">{CAT_LABEL[k] || k}</span><b className={cn("tabular", v >= 9 ? "text-good" : v < 8 ? "text-bad" : "")}>{num(v)}</b></span>
+            ))}
+          </div>
+        )}
         {o.categoria === "alojamento" && (
           <div className="flex flex-wrap gap-1.5">
             {FIELDS.alojamento.filter((f) => f.type === "bool" && o[f.k]).map((f) => <Badge key={f.k} variant="secondary" className="font-normal"><Check className="text-good" />{f.label}</Badge>)}
@@ -299,6 +308,9 @@ function OptionTable({ list, cat, dest, pessoas }) {
   const better = { nota: "max", distancia: "min", estrelas: "max", m2: "max", comentarios: "max", duracao: "min", escalas: "min", conforto: "max" };
   FIELDS[cat].forEach((f) => rows.push([f.label, (x) => (f.type === "bool" ? (x.o[f.k] ? 1 : 0) : x.o[f.k] ?? null), f.type === "bool" ? "max" : better[f.k] || null,
     (v) => (f.type === "bool" ? (v ? "Sim" : "Não") : f.type === "select" ? (f.options.find(([k]) => k === v)?.[1] ?? "—") : f.type === "stars" ? (v ? "★".repeat(v) : "—") : v == null || v === "" ? "—" : f.type === "number" ? num(v, 2) : v)]));
+  if (cat === "alojamento") Object.entries(CAT_LABEL).forEach(([k, l]) => {
+    if (list.some((x) => x.o.notasCategorias?.[k] != null)) rows.push([`Hóspedes: ${l}`, (x) => x.o.notasCategorias?.[k] ?? null, "max", (v) => (v == null ? "—" : num(v))]);
+  });
   rows.push(["Vossas estrelas (média)", (x) => (x.opinion == null ? null : Math.round(x.opinion * 10) / 10), "max", (v) => (v == null ? "—" : `${num(v)} ★`)]);
   rows.push(["Link", (x) => x.o.link || null, null, (v) => (v ? <a href={v} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">Abrir <ExternalLink className="size-3" /></a> : "—")]);
   return <CompareTable heads={list.map((x) => ({ id: x.o.id, label: <>{x.o.nome}{x.o.escolhido && <Badge className="ml-2 bg-good text-white">escolhido</Badge>}</> }))} rows={rows} items={list} />;

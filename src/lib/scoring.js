@@ -63,10 +63,16 @@ export function components(o, dest, pessoas, siblings = []) {
       c.preco = clamp((1.6 - effNight / ref.noite) / 1.0);
     } else c.preco = null;
     c.nota = has(o.nota) ? clamp((Number(o.nota) - 6.5) / 3) : null;
-    c.localizacao = has(o.distancia) ? clamp(1 - Number(o.distancia) / 4) : null;
+    const cat = o.notasCategorias || {};
+    const catLoc = has(cat.localizacao) ? clamp((Number(cat.localizacao) - 7) / 3) : null;
+    c.localizacao = has(o.distancia) ? clamp(1 - Number(o.distancia) / 4) : catLoc;
     const st = has(o.estrelas) ? Number(o.estrelas) / 5 : null;
     const sz = has(o.m2) ? clamp((Number(o.m2) - 12) / 20) : null;
-    c.qualidade = st == null && sz == null ? null : st != null && sz != null ? st * 0.6 + sz * 0.4 : st ?? sz;
+    // notas dos hóspedes por categoria (limpeza, conforto, instalações) pesam o dobro das estrelas e dos m²
+    const catVals = ["limpeza", "conforto", "instalacoes"].map((k) => cat[k]).filter(has).map(Number);
+    const catQ = catVals.length ? clamp((catVals.reduce((a, b) => a + b, 0) / catVals.length - 7) / 3) : null;
+    const qParts = [[st, 1], [sz, 1], [catQ, 2]].filter(([v]) => v != null);
+    c.qualidade = qParts.length ? qParts.reduce((s, [v, w]) => s + v * w, 0) / qParts.reduce((s, [, w]) => s + w, 0) : null;
     c.flexibilidade = (o.cancelamento ? 0.5 : 0) + (o.pagarHotel ? 0.2 : 0) + (o.cama === "twin" ? 0 : 0.3);
   } else if (o.categoria === "voo") {
     c.preco = relLow(o, siblings, (x) => n(x.preco));
@@ -161,6 +167,12 @@ export function prosCons(o, dest, pessoas, siblings = []) {
     if (o.vistaMar) P.push("Com vista");
     if (o.varanda) P.push("Varanda ou terraço");
     if (o.cama === "twin") C.push("Camas separadas (twin)");
+    const cat = o.notasCategorias || {};
+    if (has(cat.limpeza)) { if (n(cat.limpeza) >= 9) P.push(`Muito limpo (${cat.limpeza})`); else if (n(cat.limpeza) < 8) C.push(`Limpeza fraca (${cat.limpeza})`); }
+    if (has(cat.localizacao) && n(cat.localizacao) >= 9.2) P.push(`Localização elogiada (${cat.localizacao})`);
+    if (has(cat.conforto) && n(cat.conforto) < 7.8) C.push(`Pouco confortável (${cat.conforto})`);
+    if (has(cat.qualidadePreco) && n(cat.qualidadePreco) >= 8.8) P.push(`Boa relação qualidade/preço (${cat.qualidadePreco})`);
+    if (has(o.distanciaPraia) && n(o.distanciaPraia) <= 0.4) P.push("Perto da praia");
     if (n(o.m2) != null && n(o.m2) < 14) C.push(`Quarto pequeno (${o.m2} m²)`);
     if (n(o.comentarios) != null && n(o.comentarios) < 150) C.push("Poucos comentários: nota pouco fiável");
   }

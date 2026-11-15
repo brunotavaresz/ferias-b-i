@@ -40,6 +40,15 @@ test("twin penaliza e prós/contras comparam com os outros", () => {
   assert.ok(pb.pros.some((x) => x.startsWith("Melhor nota")));
 });
 
+test("notas por categoria contam na qualidade e na localização", () => {
+  const base = { id: "q", categoria: "alojamento", preco: 400, nota: 8.5 };
+  const limpo = { ...base, notasCategorias: { limpeza: 9.5, conforto: 9.2, instalacoes: 9, localizacao: 9.6 } };
+  const sujo = { ...base, notasCategorias: { limpeza: 7.2, conforto: 7.4, instalacoes: 7, localizacao: 7.5 } };
+  assert.ok(scoreOption(limpo, nice, 2).comp.qualidade > scoreOption(sujo, nice, 2).comp.qualidade);
+  assert.ok(scoreOption(limpo, nice, 2).comp.localizacao > 0.8);
+  assert.ok(prosCons(sujo, nice, 2, [sujo]).cons.some((x) => x.startsWith("Limpeza fraca")));
+});
+
 test("opinião do casal pesa", () => {
   const o = { id: "o", categoria: "alojamento", preco: 400, nota: 8, distancia: 1 };
   const loved = { ...o, ratings: { a: 5, b: 5 } };

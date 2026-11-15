@@ -44,6 +44,22 @@ Para experimentar sem Firebase, cria um `.env` com `VITE_LOCAL_MODE=true`. Nesse
 
 As regras só deixam ler e escrever uma viagem a quem estiver na lista `members` (emails em minúsculas).
 
+## IA: colar páginas (Gemini + Cloudflare Worker)
+
+O botão **Colar página** lê o texto colado de uma página (hotel, lista de resultados do Booking, voo, atividade) e prints das fotos, e transforma tudo em opções: preço, nota, notas por categoria, comentários (elogios e queixas), check-in, caução, avaliação das fotos…
+
+Funciona através de `worker/ferias-ai.js`, um Cloudflare Worker que guarda a chave do Gemini e só aceita pedidos de quem tem sessão iniciada na app e está em `ALLOWED_EMAILS`.
+
+1. Chave grátis em <https://aistudio.google.com/apikey> (plano gratuito do Gemini, sem cartão; tem limites de uso e a Google pode usar os pedidos para melhorar os produtos).
+2. Cloudflare → **Workers & Pages → Create → Create Worker**, nome `ferias-ai` → **Deploy** → **Edit code**: cola o conteúdo de `worker/ferias-ai.js` → **Deploy**.
+3. No Worker → **Settings → Variables and Secrets**:
+   - `GEMINI_API_KEY` (tipo *Secret*): a chave do passo 1.
+   - `ALLOWED_EMAILS` (tipo *Text*): os emails Google autorizados, separados por vírgulas.
+   - `GEMINI_MODEL` (opcional): por omissão `gemini-flash-latest`.
+4. Põe o URL do Worker (`https://ferias-ai.<conta>.workers.dev`) em `DEFAULT_AI_URL`, em `src/lib/ai.js`, e faz push.
+
+Não há "scan" automático do Booking: as condições do Booking proíbem a recolha automática e o site bloqueia robôs. Em vez disso, cola-se a página de resultados (25 hotéis de cada vez).
+
 ## Estrutura
 
 ```

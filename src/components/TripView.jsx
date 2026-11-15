@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Routes, Route, useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import { ArrowLeft, CalendarDays, MapPinned, Settings2, Ticket, Trash2, UserPlus, X } from "lucide-react";
+import { ArrowLeft, CalendarDays, ClipboardPaste, MapPinned, Settings2, Ticket, Trash2, UserPlus, X } from "lucide-react";
+import CaptureDialog from "./CaptureDialog.jsx";
 import Reservations from "./Reservations.jsx";
 import { store } from "../lib/store.js";
 import { firebaseEnabled } from "../lib/firebase.js";
@@ -24,6 +25,7 @@ export default function TripView({ user }) {
   const { tripId } = useParams();
   const [data, setData] = useState(undefined);
   const [settings, setSettings] = useState(false);
+  const [capture, setCapture] = useState({ open: false, destId: null });
   const toast = useToast();
   const nav = useNavigate();
   const loc = useLocation();
@@ -42,6 +44,7 @@ export default function TripView({ user }) {
       remove: (col, id) => store.remove(tripId, col, id).catch(() => toast("Não foi possível apagar.", "err")),
       updateTrip: (patch) => store.updateTrip(tripId, patch).catch(() => toast("Não foi possível guardar.", "err")),
       base: `/t/${tripId}`,
+      openCapture: (destId) => setCapture({ open: true, destId: destId || null }),
     };
   }, [data, user, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -94,6 +97,10 @@ export default function TripView({ user }) {
         <Route path="roteiro/:destId" element={<Itinerary ctx={ctx} />} />
       </Routes>
       <TripSettings ctx={ctx} open={settings} onOpenChange={setSettings} />
+      <CaptureDialog ctx={ctx} open={capture.open} defaultDestId={capture.destId || loc.pathname.match(/\/d\/([^/?]+)/)?.[1]} onOpenChange={(o) => setCapture((c) => ({ ...c, open: o }))} />
+      <Button size="lg" className="no-print fixed bottom-5 right-5 z-30 rounded-full shadow-lg" onClick={() => setCapture({ open: true, destId: null })}>
+        <ClipboardPaste /> Colar página
+      </Button>
     </div>
   );
 }
