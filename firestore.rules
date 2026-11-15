@@ -1,0 +1,31 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null;
+    }
+    function email() {
+      return request.auth.token.email.lower();
+    }
+    function isMember(tripId) {
+      return signedIn() &&
+        email() in get(/databases/$(database)/documents/trips/$(tripId)).data.members;
+    }
+
+    match /trips/{tripId} {
+      // Só quem está na lista "members" (emails) vê e edita a viagem.
+      allow read: if signedIn() && email() in resource.data.members;
+      allow create: if signedIn() && email() in request.resource.data.members
+                    && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn() && email() in resource.data.members
+                    && email() in request.resource.data.members;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /{col}/{docId} {
+        allow read, write: if (col == "destinations" || col == "options" || col == "items")
+                           && isMember(tripId);
+      }
+    }
+  }
+}
