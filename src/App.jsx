@@ -1,6 +1,8 @@
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { LogOut, Monitor, Moon, Sun, Plane } from "lucide-react";
 import { useAuth, login, logout } from "./lib/auth.js";
+import { demo, exitDemo, resetDemo } from "./lib/store.js";
+import { demoSeed } from "./lib/demoData.js";
 import { firebaseEnabled } from "./lib/firebase.js";
 import { initials } from "./lib/format.js";
 import { useTheme } from "./lib/theme.js";
@@ -30,6 +32,7 @@ export default function App() {
             <Button size="lg" className="w-full" onClick={() => login().catch((e) => toast(loginError(e), "err"))}>
               <GoogleIcon /> Entrar com Google
             </Button>
+            <Button variant="link" asChild><a href="#/demo" onClick={() => setTimeout(() => location.reload(), 0)}>Ver uma demonstração sem entrar</a></Button>
           </CardContent>
         </Card>
       </div>
@@ -41,7 +44,13 @@ export default function App() {
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
           <Link to="/" className="rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><Logo /></Link>
           <div className="flex items-center gap-2">
-            {!firebaseEnabled && <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">Modo local</Badge>}
+            {demo.active ? (
+              <>
+                <Badge className="bg-brand text-brand-foreground">Demonstração</Badge>
+                <Button variant="ghost" size="sm" onClick={() => { resetDemo(demoSeed); toast("Demo reposta"); }}>Repor</Button>
+                <Button variant="outline" size="sm" onClick={() => { exitDemo(); location.hash = "#/"; location.reload(); }}>Sair da demo</Button>
+              </>
+            ) : !firebaseEnabled && <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">Modo local</Badge>}
             <ThemeMenu />
             <UserMenu user={user} />
           </div>
@@ -92,7 +101,7 @@ function UserMenu({ user }) {
           <div className="text-sm font-medium">{user.name}</div>
           <div className="truncate text-xs text-muted-foreground">{user.email}</div>
         </DropdownMenuLabel>
-        {firebaseEnabled && <><DropdownMenuSeparator /><DropdownMenuItem onClick={logout}><LogOut /> Sair</DropdownMenuItem></>}
+        {firebaseEnabled && !demo.active && <><DropdownMenuSeparator /><DropdownMenuItem onClick={logout}><LogOut /> Sair</DropdownMenuItem></>}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -15,7 +15,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const clean = (o) => JSON.parse(JSON.stringify(o, (k, v) => (v === undefined ? null : v)));
 
 /* ------------------------------ Local ------------------------------ */
-const KEY = "ferias-a-dois:v1";
+let KEY = "ferias-a-dois:v1";
 const listeners = new Set();
 function loadLocal() {
   try { return JSON.parse(localStorage.getItem(KEY)) || { trips: {} }; } catch { return { trips: {} }; }
@@ -141,4 +141,32 @@ const remote = {
   },
 };
 
-export const store = firebaseEnabled ? remote : local;
+/* ------------------------------ Demonstração ------------------------------ */
+// A demo usa o armazenamento local com outra chave, sem login e sem tocar nos dados reais.
+export const DEMO_TRIP_ID = "demo";
+const DEMO_KEY = "ferias-a-dois:demo";
+const DEMO_FLAG = "ferias-a-dois:demo-ativa";
+export const demo = { active: false };
+export const DEMO_USER = { uid: "demo-bruno", email: "bruno@demo", name: "Bruno", demo: true };
+
+export function isDemoSession() {
+  try { return sessionStorage.getItem(DEMO_FLAG) === "1"; } catch { return false; }
+}
+export function enterDemo(seed) {
+  try { sessionStorage.setItem(DEMO_FLAG, "1"); } catch { /* sem armazenamento */ }
+  KEY = DEMO_KEY;
+  demo.active = true;
+  store = local;
+  const d = loadLocal();
+  if (!d.trips[DEMO_TRIP_ID]) saveLocal(seed());
+}
+export function resetDemo(seed) {
+  KEY = DEMO_KEY;
+  saveLocal(seed());
+}
+export function exitDemo() {
+  try { sessionStorage.removeItem(DEMO_FLAG); } catch { /* sem armazenamento */ }
+}
+
+// "let" para a demo poder trocar a implementação (os imports veem sempre o valor atual).
+export let store = firebaseEnabled ? remote : local;

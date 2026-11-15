@@ -3,7 +3,8 @@ import { Routes, Route, useParams, useNavigate, Link, useLocation } from "react-
 import { ArrowLeft, CalendarDays, ClipboardPaste, MapPinned, Settings2, Ticket, Trash2, UserPlus, X } from "lucide-react";
 import CaptureDialog from "./CaptureDialog.jsx";
 import Reservations from "./Reservations.jsx";
-import { store } from "../lib/store.js";
+import { store, demo } from "../lib/store.js";
+import DemoGuide from "./DemoGuide.jsx";
 import { firebaseEnabled } from "../lib/firebase.js";
 import { DEFAULT_WEIGHTS } from "../lib/model.js";
 import { initials } from "../lib/format.js";
@@ -39,7 +40,7 @@ export default function TripView({ user }) {
     return {
       ...data, trip, user,
       raters: members.map((e) => ({ email: e, name: nameOf(e), me: e === user.email })),
-      canRate: (email) => !firebaseEnabled || email === user.email,
+      canRate: (email) => !firebaseEnabled || demo.active || email === user.email,
       upsert: (col, obj) => store.upsert(tripId, col, obj).catch(() => toast("Não foi possível guardar.", "err")),
       remove: (col, id) => store.remove(tripId, col, id).catch(() => toast("Não foi possível apagar.", "err")),
       updateTrip: (patch) => store.updateTrip(tripId, patch).catch(() => toast("Não foi possível guardar.", "err")),
@@ -49,7 +50,7 @@ export default function TripView({ user }) {
   }, [data, user, tripId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!firebaseEnabled || !ctx) return;
+    if (!firebaseEnabled || demo.active || !ctx) return;
     if (!ctx.trip.memberNames?.[user.email]) ctx.updateTrip({ memberNames: { ...(ctx.trip.memberNames || {}), [user.email]: user.name } });
   }, [ctx, user]);
 
@@ -89,6 +90,7 @@ export default function TripView({ user }) {
         </div>
         <Separator />
       </div>
+      {demo.active && <DemoGuide ctx={ctx} />}
       <Routes>
         <Route index element={<Destinations ctx={ctx} />} />
         <Route path="d/:destId" element={<DestinationView ctx={ctx} />} />

@@ -19,6 +19,10 @@ App para planear férias a dois: guardar destinos possíveis e, em cada um, voos
 - **Reservas e pagamentos.** Nas opções escolhidas: estado (por reservar, reservado, pago), código, cancelamento grátis até, já pago e prazo para pagar. Separador Reservas com totais e painel "O que falta" (decidir, reservar, pagar, prazos, avaliações em falta).
 - **Roteiro.** Dias criados a partir das datas, chegada e partida do voo e check-in/out automáticos, planos com hora, tipo e custo, atividades por encaixar, reordenar, imprimir.
 
+## Demonstração
+
+<https://brunotavaresz.github.io/ferias-b-i/#/demo> abre uma viagem de exemplo (Nice contra Roma) com visita guiada, sem login. Os dados da demo ficam só no browser e podem ser repostos no botão "Repor".
+
 ## Onde está
 
 - **App:** <https://brunotavaresz.github.io/ferias-b-i/>. Cada push para `main` faz testes, build e publica (`.github/workflows/deploy.yml`).

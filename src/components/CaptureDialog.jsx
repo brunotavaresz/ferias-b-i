@@ -4,6 +4,7 @@ import { ClipboardPaste, ImagePlus, Loader2, Sparkles, X, RefreshCw, Check } fro
 import { aiEnabled, aiExtract, imageToDataUrl } from "../lib/ai.js";
 import { fromAi, findExisting, mergeOption } from "../lib/capture.js";
 import { geocode, kmBetween } from "../lib/geo.js";
+import { demo } from "../lib/store.js";
 import { CATEGORIES } from "../lib/model.js";
 import { eur, num } from "../lib/format.js";
 import { Field, useToast } from "./common.jsx";
@@ -99,7 +100,9 @@ export default function CaptureDialog({ ctx, open, onOpenChange, defaultDestId }
           <DialogDescription>Na página do Booking, da companhia aérea ou da atividade carrega em Ctrl+A e Ctrl+C e cola aqui. Também podes colar a página de resultados de uma pesquisa (vários hotéis de uma vez) ou prints das fotos.</DialogDescription>
         </DialogHeader>
 
-        {!aiEnabled ? (
+        {demo.active ? (
+          <div className="rounded-lg border border-brand/40 bg-brand/5 p-4 text-sm">Na demonstração a leitura automática está desligada. Na app a sério, colas aqui a página do Booking (ou de um voo ou atividade) e ela preenche tudo: preço, nota, notas por categoria, elogios e queixas dos hóspedes, check-in, caução… Também dá para colar a lista de resultados de uma pesquisa e guardar vários hotéis de uma vez.</div>
+        ) : !aiEnabled ? (
           <div className="rounded-lg border border-amber-400/50 bg-amber-400/5 p-4 text-sm">A leitura automática ainda não está ligada. Falta configurar o intermediário no Cloudflare com a chave do Gemini (ver README, secção "IA").</div>
         ) : !dests.length ? (
           <div className="rounded-lg border p-4 text-sm">Cria primeiro um destino. Assim a app sabe onde guardar.</div>
@@ -144,7 +147,7 @@ export default function CaptureDialog({ ctx, open, onOpenChange, defaultDestId }
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             {result
               ? <Button onClick={save} disabled={!chosen.length || saving}>{saving ? <Loader2 className="animate-spin" /> : <Check />} Guardar {chosen.length > 1 ? chosen.length : ""}</Button>
-              : aiEnabled && dests.length > 0 && <Button onClick={() => run()} disabled={busy}><Sparkles /> Ler</Button>}
+              : aiEnabled && !demo.active && dests.length > 0 && <Button onClick={() => run()} disabled={busy}><Sparkles /> Ler</Button>}
           </div>
         </DialogFooter>
       </DialogContent>

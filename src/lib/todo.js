@@ -43,6 +43,9 @@ export function pendingItems({ trip, destinations, options }, today = new Date()
       else if (!list.some((o) => o.escolhido)) out.push({ id: `pick-${cat}-${d.id}`, kind: "decidir", text: `Escolher o ${label} em ${d.nome} (${list.length} opções)`, destId: d.id, cat });
     }
     for (const o of chosenOptions(options, d.id)) {
+      // transportes e atividades grátis normalmente não se reservam: só avisa nos voos, alojamentos e atividades pagas
+      const needsBooking = o.categoria === "voo" || o.categoria === "alojamento" || (o.categoria === "atividade" && Number(o.preco) > 0);
+      if (!needsBooking) continue;
       if (o.reservaEstado !== "reservado" && o.reservaEstado !== "pago") {
         out.push({ id: `book-${o.id}`, kind: "reservar", text: `Reservar ${o.nome}`, destId: d.id, cat: o.categoria });
       } else if (remaining(o) > 0 && o.reservaEstado !== "pago") {
