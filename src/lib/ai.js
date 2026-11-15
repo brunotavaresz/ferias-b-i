@@ -2,7 +2,7 @@
 import { auth } from "./firebase.js";
 
 // URL do Worker. Pode ser trocado com VITE_AI_URL no .env.
-const DEFAULT_AI_URL = "";
+const DEFAULT_AI_URL = "https://ferias-ai.picmenu-pt.workers.dev";
 export const AI_URL = import.meta.env.VITE_AI_URL || DEFAULT_AI_URL;
 export const aiEnabled = Boolean(AI_URL);
 
