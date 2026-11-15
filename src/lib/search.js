@@ -15,6 +15,8 @@ export function searchLinks(dest, trip) {
   const L = {
     voo: [
       { label: "Google Flights", href: `https://www.google.com/travel/flights?hl=pt-PT&curr=EUR&q=${enc(`Voos de ${from} para ${city}${dates ? ` de ${inicio} a ${fim}` : ""} ${adults} adultos`)}` },
+      toIata && toIata.length === 3 && { label: "easyJet", href: `https://www.easyjet.com/pt/buy/flights?isOneWay=off&dep=${fromIata.toUpperCase()}&dest=${toIata.toUpperCase()}${dates ? `&dd=${inicio}&rd=${fim}` : ""}&apax=${adults}&cpax=0&ipax=0` },
+      toIata && toIata.length === 3 && { label: "Ryanair", href: `https://www.ryanair.com/pt/pt/trip/flights/select?adults=${adults}&teens=0&children=0&infants=0${dates ? `&dateOut=${inicio}&dateIn=${fim}` : ""}&isReturn=true&originIata=${fromIata.toUpperCase()}&destinationIata=${toIata.toUpperCase()}` },
       toIata && { label: "Skyscanner", href: `https://www.skyscanner.pt/transporte/voos/${fromIata}/${toIata}/${dates ? `${yymmdd(inicio)}/${yymmdd(fim)}/` : ""}?adultsv2=${adults}&cabinclass=economy` },
     ],
     alojamento: [

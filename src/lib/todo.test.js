@@ -39,6 +39,8 @@ test("links de pesquisa com datas e viajantes", () => {
   assert.ok(L.alojamento[0].href.includes("checkin=2027-03-11"));
   assert.ok(L.alojamento[0].href.includes("group_adults=2"));
   assert.ok(L.voo.find((x) => x.label === "Skyscanner").href.includes("/opo/nce/270311/270316/"));
+  assert.ok(L.voo.find((x) => x.label === "easyJet").href.includes("dep=OPO&dest=NCE&dd=2027-03-11&rd=2027-03-16&apax=2"));
+  assert.ok(L.voo.find((x) => x.label === "Ryanair").href.includes("originIata=OPO&destinationIata=NCE"));
 });
 
 test("distância entre pontos", () => {
